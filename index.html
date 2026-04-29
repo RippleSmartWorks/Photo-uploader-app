@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0a0a0f" />
+<title>Door Photo Capture — Smartsheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ==================== TOKENS ==================== */
+  :root {
+    --bg-0: #0a0a0f;
+    --bg-1: #111118;
+    --bg-2: #16161f;
+    --bg-3: #1c1c28;
+    --bg-elev: #1f1f2e;
+    --border-1: rgba(255,255,255,0.06);
+    --border-2: rgba(255,255,255,0.12);
+    --border-3: rgba(255,255,255,0.18);
+    --text-1: #f4f4f6;
+    --text-2: #a1a1ab;
+    --text-3: #71717a;
+    --text-4: #52525b;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+    --accent-soft: rgba(99,102,241,0.15);
+    --success: #10b981;
+    --success-soft: rgba(16,185,129,0.12);
+    --warning: #f59e0b;
+    --warning-soft: rgba(245,158,11,0.12);
+    --danger: #ef4444;
+    --danger-soft: rgba(239,68,68,0.12);
+    --info: #06b6d4;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.6);
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  /* ==================== RESET ==================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow-x: hidden; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-size: 14px;
+    line-height: 1.5;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99,102,241,0.15), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(6,182,212,0.08), transparent);
+    pointer-events: none; z-index: 0;
+  }
+  body > * { position: relative; z-index: 1; }
+
+  /* ==================== HEADER ==================== */
+  header {
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-1);
+    padding: 14px 18px 12px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .brand-mark {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: #fff; font-size: 13px;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.35);
+  }
+  .brand-text h1 {
+    font-size: 14px; font-weight: 700; letter-spacing: -0.01em;
+  }
+  .brand-text p {
+    font-size: 11px; color: var(--text-3); margin-top: -1px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-4); display: inline-block;
+    margin-right: 5px; vertical-align: middle;
+  }
+  .status-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .status-dot.warn { background: var(--warning); }
+
+  .status-bar {
+    display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+  }
+  .chip {
+    background: var(--bg-2);
+    border: 1px solid var(--border-1);
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text-2);
+    font-weight: 500;
+    display: flex; align-items: center;
+    transition: all 0.15s;
+  }
+  .chip strong {
+    font-weight: 700;
+    color: var(--text-1);
+    margin-left: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ==================== TABS (BOTTOM NAV) ==================== */
+  .tabs {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border-1);
+    display: flex;
+    z-index: 50;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  .tab {
+    flex: 1;
+    padding: 8px 4px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: all 0.15s;
+  }
+  .tab-icon {
+    font-size: 18px; line-height: 1;
+    margin-bottom: 4px;
+    filter: grayscale(1);
+    opacity: 0.5;
+    transition: all 0.15s;
+  }
+  .tab-label {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-3); letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .tab.active .tab-icon { filter: none; opacity: 1; }
+  .tab.active .tab-label { color: var(--text-1); }
+  .tab.active { background: var(--bg-2); }
+  .tab.disabled { opacity: 0.35; pointer-events: none; }
+  .tab.has-action::after {
+    content: '';
+    position: absolute;
+    background: var(--accent);
+  }
+
+  /* ==================== MAIN ==================== */
+  main { padding: 18px; max-width: 720px; margin: 0 auto; }
+
+  .panel { display: none; animation: fadeIn 0.25s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ==================== SECTION HEADER ==================== */
+  .section-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 18px; font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .section-sub {
+    font-size: 12px; color: var(--text-3);
+    margin-top: 2px;
+  }
+  .section-meta {
+    font-size: 11px; color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ==================== CARDS ==================== */
+  .card {
+    background: var(--bg-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-lg);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border-1);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-head h3 {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .card-head .pill {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 10px; font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .card-body { padding: 16px; }
+
+  /* ==================== GUIDED FLOW BANNER ==================== */
+  .guide-banner {
+    background: linear-gradient(135deg, var(--accent-soft), rgba(139,92,246,0.1));
+    border: 1px solid rgba(99,102,241,0.3);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .guide-banner .step-num {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+  }
+  .guide-banner .text { flex: 1; }
+  .guide-banner h4 {
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .guide-banner p {
+    font-size: 12px; color: var(--text-2);
+  }
+
+  /* ==================== INPUTS ==================== */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  label {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; font-weight: 500;
+    color: var(--text-2); margin-bottom: 6px;
+  }
+  label .req { color: var(--danger); margin-left: 2px; }
+  label .hint-link { color: var(--accent); cursor: pointer; font-weight: 500; }
+
+  input[type="text"], input[type="password"], select, textarea {
+    width: 100%;
+    padding: 11px 13px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius-md);
+    color: var(--text-1);
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    background: var(--bg-3);
+  }
+  input::placeholder { color: var(--text-4); }
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1ab' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  .field-hint {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 5px;
+    line-height: 1.5;
+  }
+  .field-hint code {
+    background: var(--bg-3);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--info);
+  }
+
+  .input-grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+
+  /* ==================== BUTTONS ==================== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 6px;
+    padding: 11px 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.12s;
+    width: 100%;
+    background: var(--bg-3);
+    color: var(--text-1);
+    border-color: var(--border-2);
+  }
+  .btn:hover { background: var(--bg-elev); border-color: var(--border-3); }
+  .btn:active { transform: scale(0.985); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.1) inset, 0 4px 12px rgba(99,102,241,0.3);
+  }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.success {
+    background: var(--success);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+  }
+  .btn.danger { background: var(--danger); color: #fff; border-color: transparent; }
+  .btn.warning {
+    background: var(--bg-2);
+    color: var(--warning);
+    border-color: rgba(245,158,11,0.4);
+  }
+  .btn.ghost { background: transparent; }
+  .btn.lg { padding: 14px 20px; font-size: 14px; }
+  .btn.xl {
+    padding: 18px;
+    font-size: 15px;
+    border-radius: var(--radius-lg);
+  }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  /* ==================== CAPTURE HERO ==================== */
+  .capture-hero {
+    position: relative;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border: 1px solid var(--border-2);
+    padding: 22px 20px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .capture-hero::before {
+    content: '';
+    position: absolute;
+    top: -40%; right: -20%;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, var(--accent), transparent 70%);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .capture-hero-row {
+    display: flex; align-items: center; gap: 14px;
+    position: relative;
+  }
+  .capture-hero-icon {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .capture-hero h2 {
+    font-size: 16px; font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .capture-hero p {
+    font-size: 12px; color: var(--text-2); margin-top: 2px;
+  }
+
+  /* ==================== SIDE TOGGLE ==================== */
+  .side-toggle {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .side-toggle input { display: none; }
+  .side-toggle label {
+    margin: 0;
+    padding: 14px 12px;
+    background: var(--bg-2);
+    border: 1.5px solid var(--border-2);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    display: block;
+  }
+  .side-toggle label .name {
+    display: block; font-weight: 600; font-size: 14px;
+    color: var(--text-1);
+  }
+  .side-toggle label .tag {
+    display: block; font-size: 10px; color: var(--text-3);
+    margin-top: 2px; font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+  .side-toggle input:checked + label.u {
+    background: rgba(6,182,212,0.12);
+    border-color: var(--info);
+  }
+  .side-toggle input:checked + label.u .name { color: var(--info); }
+  .side-toggle input:checked + label.s {
+    background: var(--success-soft);
+    border-color: var(--success);
+  }
+  .side-toggle input:checked + label.s .name { color: var(--success); }
+
+  /* ==================== STATS GRID ==================== */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .stat-card .value {
+    font-size: 24px; font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .stat-card.matched .value { color: var(--success); }
+  .stat-card.orphan .value { color: var(--warning); }
+  .stat-card .label {
+    font-size: 10px; font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+  }
+
+  /* ==================== GALLERY ==================== */
+  .gallery-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bg-1);
+    border: 1px solid var(--border-1);
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+  .gallery-toolbar .info { color: var(--text-2); }
+  .gallery-toolbar .info strong {
+    color: var(--text-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .gallery-toolbar .actions { display: flex; gap: 6px; }
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    cursor: pointer;
+    width: auto;
+    font-weight: 500;
+  }
+  .icon-btn:hover { color: var(--text-1); border-color: var(--border-3); }
+  .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .photo-tile {
+    background: var(--bg-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+    transition: all 0.15s;
+  }
+  .photo-tile:hover { border-color: var(--border-2); }
+  .photo-tile img {
+    width: 100%;
+    aspect-ratio: 3/4;
+    object-fit: cover;
+    display: block;
+    background: var(--bg-2);
+  }
+  .photo-tile .info {
+    padding: 9px 10px;
+  }
+  .photo-tile .door {
+    font-size: 12px; font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .photo-tile .meta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 5px;
+  }
+  .photo-tile .side-pill {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 999px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .photo-tile .side-pill.u { background: rgba(6,182,212,0.15); color: var(--info); }
+  .photo-tile .side-pill.s { background: var(--success-soft); color: var(--success); }
+  .photo-tile .size {
+    font-size: 10px;
+    color: var(--text-3);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .photo-tile .del-btn {
+    position: absolute; top: 6px; right: 6px;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    border: 1px solid var(--border-2);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    padding: 0; font-size: 14px; line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .photo-tile .del-btn:hover { background: var(--danger); border-color: var(--danger); }
+  .photo-tile .status-pill {
+    position: absolute; top: 6px; left: 6px;
+    background: rgba(16,185,129,0.95);
+    color: #fff;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9px; font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ==================== EMPTY STATES ==================== */
+  .empty-state {
+    text-align: center;
+    padding: 50px 20px;
+    border: 1px dashed var(--border-2);
+    border-radius: var(--radius-lg);
+    background: var(--bg-1);
+  }
+  .empty-state .icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+  .empty-state h4 {
+    font-size: 14px; font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .empty-state p {
+    font-size: 12px; color: var(--text-3);
+  }
+
+  /* ==================== LOG BOX ==================== */
+  .log-box {
+    background: #050507;
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-md);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 12px;
+    max-height: 280px;
+    overflow-y: auto;
+    line-height: 1.7;
+    margin-top: 12px;
+    color: var(--text-2);
+  }
+  .log-box .err { color: var(--danger); }
+  .log-box .warn { color: var(--warning); }
+  .log-box .ok { color: var(--success); }
+  .log-box .hdr {
+    color: var(--accent);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-1);
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+  }
+
+  /* ==================== TOAST ==================== */
+  #toast {
+    position: fixed;
+    bottom: 100px; left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: var(--bg-elev);
+    border: 1px solid var(--border-2);
+    color: var(--text-1);
+    padding: 11px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    display: flex; align-items: center; gap: 8px;
+    backdrop-filter: blur(10px);
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast.success { border-color: var(--success); }
+  #toast.error { border-color: var(--danger); }
+
+  /* ==================== PROGRESS ==================== */
+  .progress-wrap {
+    background: var(--bg-2);
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 10px;
+  }
+  .progress-wrap > div {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #8b5cf6);
+    width: 0%;
+    transition: width 0.3s;
+    border-radius: 999px;
+  }
+
+  /* ==================== UTILS ==================== */
+  #cameraInput { display: none; }
+  .hidden { display: none !important; }
+  .text-mono { font-family: 'JetBrains Mono', monospace; }
+  .text-muted { color: var(--text-3); }
+  kbd {
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-bottom-width: 2px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">B</div>
+    <div class="brand-text">
+      <h1>Door Photo Capture</h1>
+      <p>BluOcean Security · Smartsheet</p>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="chip" id="chip-token">
+      <span class="status-dot" id="dot-token"></span>API Token<strong id="val-token">—</strong>
+    </div>
+    <div class="chip" id="chip-sheet">
+      <span class="status-dot" id="dot-sheet"></span>Sheet<strong id="val-sheet">—</strong>
+    </div>
+    <div class="chip">
+      <span class="status-dot ok"></span>Photos<strong id="val-photos">0</strong>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ==================== SETUP PANEL (DEFAULT FIRST PANEL) ==================== -->
+  <div class="panel active" id="panel-setup">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Setup</div>
+        <div class="section-sub">Connect to Smartsheet to begin</div>
+      </div>
+      <span class="section-meta">Step 1 of 4</span>
+    </div>
+
+    <div class="guide-banner" id="setupGuide">
+      <div class="step-num">1</div>
+      <div class="text">
+        <h4>First time? Three things needed</h4>
+        <p>Proxy URL (one-time deploy) · API token · Sheet ID — see <code>cloudflare_worker.js</code> for proxy setup</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h3>Smartsheet Connection</h3>
+        <span class="pill" id="connectionPill">Disconnected</span>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Proxy URL <span class="req">*</span></label>
+          <input type="text" id="proxyUrl" placeholder="https://smartsheet-proxy.YOURNAME.workers.dev" />
+          <div class="field-hint">Smartsheet blocks direct browser calls (CORS). Deploy the free Cloudflare Worker — see <code>cloudflare_worker.js</code> for setup steps.</div>
+        </div>
+
+        <div class="field">
+          <label>API Token <span class="req">*</span></label>
+          <input type="password" id="apiToken" placeholder="paste token from Smartsheet → Personal Settings → API Access" />
+          <div class="field-hint">Stored only on this device. Use <strong>Forget token</strong> on shared devices.</div>
+        </div>
+
+        <div class="field">
+          <label>Sheet ID <span class="req">*</span></label>
+          <input type="text" id="sheetId" placeholder="16-digit numeric ID" inputmode="numeric" />
+          <div class="field-hint">In Smartsheet: <strong>File → Properties</strong> — copy <code>Sheet ID</code></div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn primary" id="saveCreds">↗ Connect & load doors</button>
+          <button class="btn warning" id="forgetTokenBtn" style="flex: 0 0 auto; width: auto;">Forget</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>Image Settings</h3></div>
+      <div class="card-body">
+        <div class="field">
+          <label>Resize dimensions (W × H)</label>
+          <div class="input-grid-2">
+            <input type="text" id="targetW" value="3000" inputmode="numeric" />
+            <input type="text" id="targetH" value="4000" inputmode="numeric" />
+          </div>
+          <div class="field-hint">Lower values save phone storage. <code>1500 × 2000</code> is plenty for most uses.</div>
+        </div>
+        <div class="field">
+          <label>JPEG Quality (0.1 – 1.0)</label>
+          <input type="text" id="jpegQ" value="0.85" inputmode="decimal" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.04);">
+      <div class="card-head" style="border-color: rgba(245,158,11,0.15);">
+        <h3 style="color: var(--warning);">Security Notice</h3>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 12px; color: var(--text-2); line-height: 1.6;">
+          Your API token grants full Smartsheet access to your account. This app stores it
+          locally in your browser only — it is never transmitted anywhere except directly to Smartsheet.
+          On a shared device, tap <strong>Forget</strong> when done.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== CAPTURE PANEL ==================== -->
+  <div class="panel" id="panel-capture">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Capture</div>
+        <div class="section-sub">Tag door, choose side, then shoot</div>
+      </div>
+      <span class="section-meta">Step 2 of 4</span>
+    </div>
+
+    <div id="captureNotConnected" class="empty-state hidden">
+      <div class="icon">⚙</div>
+      <h4>Not connected to Smartsheet yet</h4>
+      <p>Go to <strong>Setup</strong> first to load your door list</p>
+    </div>
+
+    <div id="captureReady">
+      <div class="capture-hero">
+        <div class="capture-hero-row">
+          <div class="capture-hero-icon">📷</div>
+          <div>
+            <h2>Ready to capture</h2>
+            <p>Doors loaded from sheet · Tag → Shoot → Auto-save</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Photo Details</h3></div>
+        <div class="card-body">
+          <div class="field">
+            <label>Door <span class="req">*</span></label>
+            <select id="doorSelect">
+              <option value="">— select door —</option>
+            </select>
+            <div class="field-hint" id="doorHint">Loaded from your Smartsheet</div>
+          </div>
+
+          <div class="field">
+            <label>Side <span class="req">*</span></label>
+            <div class="side-toggle">
+              <input type="radio" name="side" id="sideU" value="U" checked />
+              <label for="sideU" class="u">
+                <span class="name">Unsecure</span>
+                <span class="tag">U · OUTSIDE</span>
+              </label>
+              <input type="radio" name="side" id="sideS" value="S" />
+              <label for="sideS" class="s">
+                <span class="name">Secure</span>
+                <span class="tag">S · INSIDE</span>
+              </label>
+            </div>
+          </div>
+
+          <button class="btn xl primary" id="captureBtn">📸  Open Camera</button>
+          <input type="file" accept="image/*" capture="environment" id="cameraInput" />
+          <div class="field-hint" style="text-align: center; margin-top: 8px;">
+            Photo auto-resizes & saves with filename like <code>04F-01U.jpg</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== GALLERY PANEL ==================== -->
+  <div class="panel" id="panel-gallery">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Gallery</div>
+        <div class="section-sub">Photos saved on this device</div>
+      </div>
+      <span class="section-meta">Step 3 of 4</span>
+    </div>
+
+    <div class="gallery-toolbar">
+      <div class="info">
+        <strong id="galleryCount">0</strong> photos · <strong id="galleryStorage">0 MB</strong>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" id="refreshGallery">↻ Refresh</button>
+        <button class="icon-btn danger" id="clearAllBtn">Clear all</button>
+      </div>
+    </div>
+
+    <div id="galleryGrid" class="gallery-grid"></div>
+    <div id="galleryEmpty" class="empty-state hidden">
+      <div class="icon">📷</div>
+      <h4>No photos yet</h4>
+      <p>Head to <strong>Capture</strong> to start</p>
+    </div>
+  </div>
+
+  <!-- ==================== SYNC PANEL ==================== -->
+  <div class="panel" id="panel-sync">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Sync</div>
+        <div class="section-sub">Upload to Smartsheet</div>
+      </div>
+      <span class="section-meta">Step 4 of 4</span>
+    </div>
+
+    <div id="syncNotConnected" class="empty-state hidden">
+      <div class="icon">⚙</div>
+      <h4>Not connected to Smartsheet</h4>
+      <p>Complete <strong>Setup</strong> first</p>
+    </div>
+
+    <div id="syncReady">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="value" id="statTotal">0</div>
+          <div class="label">Pending</div>
+        </div>
+        <div class="stat-card matched">
+          <div class="value" id="statMatched">0</div>
+          <div class="label">Matched</div>
+        </div>
+        <div class="stat-card orphan">
+          <div class="value" id="statOrphan">0</div>
+          <div class="label">Orphan</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Column Mapping</h3></div>
+        <div class="card-body">
+          <div class="field">
+            <label>Unsecure column</label>
+            <select id="unsecureCol"><option value="">— pick column —</option></select>
+          </div>
+          <div class="field">
+            <label>Secure column</label>
+            <select id="secureCol"><option value="">— pick column —</option></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h3>Upload</h3></div>
+        <div class="card-body">
+          <button class="btn lg" id="previewBtn" style="margin-bottom: 8px;">
+            ⊕  Preview matches
+          </button>
+          <div class="btn-row">
+            <button class="btn warning lg" id="dryRunBtn">Dry run</button>
+            <button class="btn success lg" id="liveUploadBtn">Live upload</button>
+          </div>
+          <div class="progress-wrap hidden" id="progBar"><div></div></div>
+          <div class="log-box hidden" id="logBox"></div>
+          <button class="btn danger" id="clearSyncedBtn" style="margin-top: 12px;" hidden>
+            🗑  Clear successfully synced photos
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<nav class="tabs">
+  <div class="tab" data-panel="setup">
+    <div class="tab-icon">⚙</div>
+    <div class="tab-label">Setup</div>
+  </div>
+  <div class="tab disabled" data-panel="capture" id="tab-capture">
+    <div class="tab-icon">📷</div>
+    <div class="tab-label">Capture</div>
+  </div>
+  <div class="tab" data-panel="gallery">
+    <div class="tab-icon">🖼</div>
+    <div class="tab-label">Gallery</div>
+  </div>
+  <div class="tab disabled" data-panel="sync" id="tab-sync">
+    <div class="tab-icon">↗</div>
+    <div class="tab-label">Sync</div>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<script>
+/* ==========================================================
+   Smartsheet Door-Photo Mobile Web App v2 (Enterprise Dark)
+   ========================================================== */
+
+const DB_NAME  = "DoorPhotosDB";
+const STORE    = "photos";
+
+function apiBase() {
+  const proxy = (localStorage.getItem("ss_proxyUrl") || "").trim().replace(/\/+$/, "");
+  if (!proxy) return null;
+  return proxy;   // Worker forwards everything to Smartsheet, so endpoints stay the same paths
+}
+
+let db          = null;
+let sheetData   = null;
+let doorList    = [];
+let isConnected = false;
+
+/* ============= TOAST ============= */
+function toast(msg, kind="default", ms=2200) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show " + kind;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.className = "", ms);
+}
+
+/* ============= LOG ============= */
+function log(msg, cls="") {
+  const lb = document.getElementById("logBox");
+  lb.classList.remove("hidden");
+  const line = document.createElement("div");
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  lb.appendChild(line);
+  lb.scrollTop = lb.scrollHeight;
+}
+function logHeader(msg) { log(msg, "hdr"); }
+
+/* ============= TAB NAVIGATION ============= */
+function switchTab(key) {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+  const tab   = document.querySelector(`.tab[data-panel="${key}"]`);
+  const panel = document.getElementById("panel-" + key);
+  if (tab) tab.classList.add("active");
+  if (panel) panel.classList.add("active");
+  if (key === "gallery") refreshGallery();
+  if (key === "sync")    updateSyncStats();
+}
+document.querySelectorAll(".tab").forEach(t => {
+  t.addEventListener("click", () => {
+    if (t.classList.contains("disabled")) {
+      toast("Connect to Smartsheet first", "error");
+      switchTab("setup");
+      return;
+    }
+    switchTab(t.dataset.panel);
+  });
+});
+
+function refreshTabAvailability() {
+  document.getElementById("tab-capture").classList.toggle("disabled", !isConnected);
+  document.getElementById("tab-sync").classList.toggle("disabled", !isConnected);
+  document.getElementById("captureNotConnected").classList.toggle("hidden", isConnected);
+  document.getElementById("captureReady").classList.toggle("hidden", !isConnected);
+  document.getElementById("syncNotConnected").classList.toggle("hidden", isConnected);
+  document.getElementById("syncReady").classList.toggle("hidden", !isConnected);
+  const pill = document.getElementById("connectionPill");
+  pill.textContent = isConnected ? "Connected" : "Disconnected";
+  pill.style.background = isConnected ? "var(--success-soft)" : "var(--bg-3)";
+  pill.style.color      = isConnected ? "var(--success)" : "var(--text-3)";
+}
+
+/* ============= INDEXEDDB ============= */
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains(STORE)) {
+        d.createObjectStore(STORE, { keyPath: "id", autoIncrement: true })
+         .createIndex("door", "door", { unique: false });
+      }
+    };
+    req.onsuccess = e => resolve(e.target.result);
+    req.onerror   = e => reject(e.target.error);
+  });
+}
+function dbAdd(record) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).add(record).onsuccess = e => resolve(e.target.result);
+    tx.onerror = () => reject(tx.error);
+  });
+}
+function dbAll() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readonly");
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+function dbDelete(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(id).onsuccess = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+function dbUpdate(record) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(record).onsuccess = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+function dbClear() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).clear().onsuccess = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ============= IMAGE RESIZE ============= */
+function resizeImage(file, maxW, maxH, quality) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let w = img.width, h = img.height;
+        const ratio = Math.min(maxW / w, maxH / h);
+        if (ratio < 1) { w = Math.round(w * ratio); h = Math.round(h * ratio); }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(b => resolve(b), "image/jpeg", quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============= FILENAME ============= */
+const DOOR_RX = /^([A-Za-z]+)-(\d+)([A-Za-z]+)-(\d+)$/;
+function buildFilename(doorName, side) {
+  const m = DOOR_RX.exec(doorName);
+  if (!m) return doorName.replace(/[^A-Za-z0-9]/g, "_") + side + ".jpg";
+  return `${m[2]}${m[3]}-${m[4]}${side}.jpg`;
+}
+
+/* ============= CAPTURE ============= */
+document.getElementById("captureBtn").addEventListener("click", () => {
+  const door = document.getElementById("doorSelect").value;
+  if (!door) { toast("Pick a door first", "error"); return; }
+  document.getElementById("cameraInput").click();
+});
+
+document.getElementById("cameraInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const door  = document.getElementById("doorSelect").value;
+  const side  = document.querySelector("input[name=side]:checked").value;
+  const fname = buildFilename(door, side);
+  const targetW = parseInt(document.getElementById("targetW").value) || 3000;
+  const targetH = parseInt(document.getElementById("targetH").value) || 4000;
+  const jpegQ   = parseFloat(document.getElementById("jpegQ").value) || 0.85;
+
+  toast("Resizing & saving…");
+  try {
+    const blob = await resizeImage(file, targetW, targetH, jpegQ);
+    await dbAdd({
+      door, side, filename: fname, blob,
+      sizeKB: Math.round(blob.size / 1024),
+      capturedAt: new Date().toISOString(),
+      uploaded: false
+    });
+    toast(`✓ Saved ${fname}`, "success");
+    updateBadges();
+  } catch (err) {
+    toast("✗ " + err.message, "error", 4000);
+  }
+  e.target.value = "";
+});
+
+/* ============= GALLERY ============= */
+async function refreshGallery() {
+  const all = await dbAll();
+  const grid  = document.getElementById("galleryGrid");
+  const empty = document.getElementById("galleryEmpty");
+  grid.innerHTML = "";
+
+  document.getElementById("galleryCount").textContent = all.length;
+  const totalKB = all.reduce((s, r) => s + (r.sizeKB || 0), 0);
+  document.getElementById("galleryStorage").textContent = (totalKB / 1024).toFixed(1) + " MB";
+
+  if (all.length === 0) {
+    empty.classList.remove("hidden");
+    grid.classList.add("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+  grid.classList.remove("hidden");
+
+  all.sort((a, b) => b.capturedAt.localeCompare(a.capturedAt));
+
+  for (const rec of all) {
+    const url = URL.createObjectURL(rec.blob);
+    const tile = document.createElement("div");
+    tile.className = "photo-tile";
+    tile.innerHTML = `
+      ${rec.uploaded ? '<div class="status-pill">SYNCED</div>' : ''}
+      <button class="del-btn" data-id="${rec.id}">×</button>
+      <img src="${url}" alt="${rec.filename}" />
+      <div class="info">
+        <div class="door">${rec.door}</div>
+        <div class="meta">
+          <span class="side-pill ${rec.side === 'U' ? 'u' : 's'}">
+            ${rec.side === 'U' ? 'Unsecure' : 'Secure'}
+          </span>
+          <span class="size">${rec.sizeKB} KB</span>
+        </div>
+      </div>
+    `;
+    grid.appendChild(tile);
+  }
+
+  grid.querySelectorAll(".del-btn").forEach(b => {
+    b.addEventListener("click", async (ev) => {
+      ev.stopPropagation();
+      const id = parseInt(b.dataset.id);
+      if (confirm("Delete this photo?")) {
+        await dbDelete(id);
+        toast("Deleted", "success");
+        refreshGallery();
+        updateBadges();
+      }
+    });
+  });
+}
+document.getElementById("refreshGallery").addEventListener("click", refreshGallery);
+document.getElementById("clearAllBtn").addEventListener("click", async () => {
+  if (!confirm("Delete ALL local photos? This cannot be undone.")) return;
+  await dbClear();
+  toast("Cleared", "success");
+  refreshGallery();
+  updateBadges();
+});
+
+/* ============= STATUS BADGES ============= */
+async function updateBadges() {
+  const all = db ? await dbAll() : [];
+  document.getElementById("val-photos").textContent = all.length;
+
+  const tok = localStorage.getItem("ss_token");
+  document.getElementById("val-token").textContent = tok ? "saved" : "—";
+  document.getElementById("dot-token").className = "status-dot " + (tok ? "ok" : "warn");
+
+  const sid = localStorage.getItem("ss_sheetId");
+  document.getElementById("val-sheet").textContent = sid ? sid.slice(-6) : "—";
+  document.getElementById("dot-sheet").className = "status-dot " + (sid ? "ok" : "warn");
+}
+
+/* ============= SMARTSHEET API ============= */
+function ssHeaders() {
+  return {
+    "Authorization": "Bearer " + localStorage.getItem("ss_token"),
+    "Content-Type":  "application/json"
+  };
+}
+
+async function loadSheet() {
+  const tok    = localStorage.getItem("ss_token");
+  const sid    = localStorage.getItem("ss_sheetId");
+  const proxy  = apiBase();
+  if (!tok || !sid || !proxy) return;
+
+  toast("Loading sheet…");
+  try {
+    const r = await fetch(`${proxy}/sheets/${sid}`, { headers: ssHeaders() });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const data = await r.json();
+
+    const doorColId = data.columns[0].id;
+    const rows = data.rows.map(row => {
+      const cell = row.cells.find(c => c.columnId === doorColId);
+      return { id: row.id, doorName: (cell && cell.value || "").toString().trim() };
+    }).filter(r => r.doorName);
+
+    sheetData = {
+      id: sid,
+      columns: data.columns.map(c => ({ id: c.id, title: c.title })),
+      rows
+    };
+    doorList = rows.map(r => r.doorName);
+
+    const ds = document.getElementById("doorSelect");
+    ds.innerHTML = '<option value="">— select door —</option>' +
+      doorList.map(d => `<option value="${d}">${d}</option>`).join("");
+
+    const colOpts = '<option value="">— pick column —</option>' +
+      sheetData.columns.map(c => `<option value="${c.title}">${c.title}</option>`).join("");
+    document.getElementById("unsecureCol").innerHTML = colOpts;
+    document.getElementById("secureCol").innerHTML   = colOpts;
+
+    const u = localStorage.getItem("ss_unsecureCol");
+    const s = localStorage.getItem("ss_secureCol");
+    if (u) document.getElementById("unsecureCol").value = u;
+    if (s) document.getElementById("secureCol").value   = s;
+
+    document.getElementById("doorHint").textContent = `✓ ${rows.length} doors loaded`;
+    isConnected = true;
+    refreshTabAvailability();
+    toast(`✓ ${rows.length} doors loaded`, "success");
+    updateBadges();
+    return true;
+  } catch (err) {
+    toast("✗ " + err.message, "error", 4000);
+    isConnected = false;
+    refreshTabAvailability();
+    return false;
+  }
+}
+
+/* ============= SETUP ACTIONS ============= */
+document.getElementById("saveCreds").addEventListener("click", async () => {
+  const proxy = document.getElementById("proxyUrl").value.trim();
+  const tok   = document.getElementById("apiToken").value.trim();
+  const sid   = document.getElementById("sheetId").value.trim();
+  if (!proxy || !tok || !sid) { toast("All three fields required", "error"); return; }
+  if (!/^https:\/\//.test(proxy)) { toast("Proxy URL must start with https://", "error"); return; }
+  localStorage.setItem("ss_proxyUrl", proxy);
+  localStorage.setItem("ss_token",    tok);
+  localStorage.setItem("ss_sheetId",  sid);
+  const ok = await loadSheet();
+  if (ok) {
+    setTimeout(() => switchTab("capture"), 600);
+  }
+});
+document.getElementById("forgetTokenBtn").addEventListener("click", () => {
+  localStorage.removeItem("ss_token");
+  document.getElementById("apiToken").value = "";
+  isConnected = false;
+  refreshTabAvailability();
+  toast("Token forgotten", "success");
+  updateBadges();
+});
+
+/* ============= SYNC STATS ============= */
+async function updateSyncStats() {
+  if (!sheetData) return;
+  const all = await dbAll();
+  const pending = all.filter(p => !p.uploaded);
+  const doorSet = new Set(doorList);
+  const matched = pending.filter(p => doorSet.has(p.door)).length;
+  document.getElementById("statTotal").textContent   = pending.length;
+  document.getElementById("statMatched").textContent = matched;
+  document.getElementById("statOrphan").textContent  = pending.length - matched;
+}
+
+document.getElementById("previewBtn").addEventListener("click", async () => {
+  if (!sheetData) { toast("Connect first", "error"); return; }
+  await updateSyncStats();
+  const all = (await dbAll()).filter(p => !p.uploaded);
+  document.getElementById("logBox").innerHTML = "";
+  logHeader(`▸ Preview — ${all.length} pending photos`);
+  const doorSet = new Set(doorList);
+  for (const p of all) {
+    const ok = doorSet.has(p.door);
+    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} ${p.side==='U'?'Unsecure':'Secure'}`,
+        ok ? 'ok' : 'warn');
+  }
+});
+
+/* ============= UPLOAD ============= */
+async function attachImageToCell(sheetId, rowId, columnId, blob, filename) {
+  const proxy = apiBase();
+  const r = await fetch(
+    `${proxy}/sheets/${sheetId}/rows/${rowId}/columns/${columnId}/cellimages`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + localStorage.getItem("ss_token"),
+        "Content-Type":  "image/jpeg",
+        "Content-Length": blob.size,
+        "Content-Disposition": `attachment; filename="${filename}"`
+      },
+      body: blob
+    }
+  );
+  if (!r.ok) {
+    const errBody = await r.text();
+    throw new Error(`HTTP ${r.status}: ${errBody.slice(0, 120)}`);
+  }
+  return r.json();
+}
+
+async function runUpload(dryRun) {
+  if (!sheetData) { toast("Connect first", "error"); return; }
+  const uCol = document.getElementById("unsecureCol").value;
+  const sCol = document.getElementById("secureCol").value;
+  if (!uCol || !sCol) { toast("Pick Unsecure & Secure columns", "error"); return; }
+  localStorage.setItem("ss_unsecureCol", uCol);
+  localStorage.setItem("ss_secureCol",   sCol);
+
+  const colMap = Object.fromEntries(sheetData.columns.map(c => [c.title, c.id]));
+  const rowMap = Object.fromEntries(sheetData.rows.map(r => [r.doorName, r.id]));
+
+  const all = (await dbAll()).filter(p => !p.uploaded);
+  if (all.length === 0) { toast("Nothing to upload"); return; }
+
+  document.getElementById("logBox").innerHTML = "";
+  document.getElementById("logBox").classList.remove("hidden");
+  document.getElementById("progBar").classList.remove("hidden");
+  logHeader(`▸ ${dryRun ? 'DRY RUN' : 'LIVE UPLOAD'} — ${all.length} photos`);
+
+  let ok = 0, err = 0, skip = 0;
+  for (let i = 0; i < all.length; i++) {
+    const p = all[i];
+    document.querySelector("#progBar > div").style.width =
+      Math.round((i / all.length) * 100) + "%";
+
+    const rowId = rowMap[p.door];
+    if (!rowId) {
+      log(`  ⚠ no row for ${p.door} — skip ${p.filename}`, "warn");
+      skip++; continue;
+    }
+    const colTitle = (p.side === "U") ? uCol : sCol;
+    const colId    = colMap[colTitle];
+    if (!colId) {
+      log(`  ⚠ no col '${colTitle}' — skip`, "warn");
+      skip++; continue;
+    }
+
+    if (dryRun) {
+      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle}`, "warn");
+      ok++;
+    } else {
+      try {
+        await attachImageToCell(sheetData.id, rowId, colId, p.blob, p.filename);
+        log(`  ✓ ${p.filename} → ${p.door} ${p.side === 'U' ? 'Unsecure' : 'Secure'}`, "ok");
+        p.uploaded = true;
+        p.uploadedAt = new Date().toISOString();
+        await dbUpdate(p);
+        ok++;
+      } catch (ex) {
+        log(`  ✗ ${p.filename}: ${ex.message}`, "err");
+        err++;
+      }
+    }
+  }
+  document.querySelector("#progBar > div").style.width = "100%";
+  log(`▸ Done — ok: ${ok}, errors: ${err}, skipped: ${skip}`, "hdr");
+  toast(`Done: ${ok} ok, ${err} err`, err > 0 ? "error" : "success", 3000);
+  if (!dryRun && ok > 0) {
+    document.getElementById("clearSyncedBtn").hidden = false;
+  }
+  refreshGallery();
+}
+document.getElementById("dryRunBtn").addEventListener("click", () => runUpload(true));
+document.getElementById("liveUploadBtn").addEventListener("click", () => {
+  if (!confirm("Run LIVE upload? This will write to Smartsheet.")) return;
+  runUpload(false);
+});
+document.getElementById("clearSyncedBtn").addEventListener("click", async () => {
+  const all = await dbAll();
+  let n = 0;
+  for (const p of all) if (p.uploaded) { await dbDelete(p.id); n++; }
+  toast(`Cleared ${n} synced photos`, "success");
+  document.getElementById("clearSyncedBtn").hidden = true;
+  refreshGallery();
+  updateBadges();
+});
+
+/* ============= INIT ============= */
+(async function init() {
+  db = await openDB();
+
+  const proxy = localStorage.getItem("ss_proxyUrl");
+  const tok   = localStorage.getItem("ss_token");
+  const sid   = localStorage.getItem("ss_sheetId");
+  if (proxy) document.getElementById("proxyUrl").value = proxy;
+  if (tok)   document.getElementById("apiToken").value = tok;
+  if (sid)   document.getElementById("sheetId").value  = sid;
+  const tw = localStorage.getItem("ss_targetW"); if (tw) document.getElementById("targetW").value = tw;
+  const th = localStorage.getItem("ss_targetH"); if (th) document.getElementById("targetH").value = th;
+  const jq = localStorage.getItem("ss_jpegQ");   if (jq) document.getElementById("jpegQ").value   = jq;
+
+  ["targetW", "targetH", "jpegQ"].forEach(k => {
+    document.getElementById(k).addEventListener("change", e =>
+      localStorage.setItem("ss_" + k, e.target.value));
+  });
+
+  await updateBadges();
+  refreshTabAvailability();
+
+  // If credentials saved → auto-connect AND auto-jump to Capture
+  if (proxy && tok && sid) {
+    const ok = await loadSheet();
+    if (ok) switchTab("capture");
+  } else {
+    switchTab("setup");
+  }
+})();
+</script>
+</body>
+</html>
