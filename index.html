@@ -346,24 +346,40 @@
   label .req { color: var(--danger); margin-left: 2px; }
   label .hint-link { color: var(--accent); cursor: pointer; font-weight: 500; }
 
-  input[type="text"], input[type="password"], select, textarea {
+  input[type="text"], input[type="password"], input[type="email"],
+  input[type="tel"],  input[type="url"],      input[type="number"],
+  input[type="search"], input:not([type]),
+  select, textarea {
     width: 100%;
     padding: 11px 13px;
     background: var(--bg-2);
     border: 1px solid var(--border-2);
     border-radius: var(--radius-md);
     color: var(--text-1);
+    -webkit-text-fill-color: var(--text-1);  /* Forces text color on iOS Safari */
     font-size: 14px;
     font-family: inherit;
     transition: all 0.15s;
+    -webkit-appearance: none;
+    appearance: none;
   }
-  input:focus, select:focus {
+  input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
     background: var(--bg-3);
   }
-  input::placeholder { color: var(--text-4); }
+  input::placeholder { color: var(--text-4); -webkit-text-fill-color: var(--text-4); }
+
+  /* Force dark theme on autofilled inputs (Chrome/iOS make these yellow/white otherwise) */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-1) !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-2) inset !important;
+    caret-color: var(--text-1);
+    transition: background-color 5000s ease-in-out 0s;
+  }
   select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1ab' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -883,6 +899,38 @@
         <div class="field-hint" style="margin-top: 10px;">
           ACS filenames: <code>04F-01U.jpg</code> / <code>04F-01S.jpg</code>. CCTV filenames: <code>09F-01L.jpg</code> / <code>09F-02R.jpg</code>.
         </div>
+      </div>
+    </div>
+
+    <div class="card" style="border-color: rgba(6,182,212,0.25); background: rgba(6,182,212,0.04);">
+      <div class="card-head" style="border-color: rgba(6,182,212,0.15);">
+        <h3 style="color: var(--info);">🔍 Diagnostics</h3>
+        <span class="pill" style="background: var(--info); color: #fff;">Debug</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size: 12px; color: var(--text-2); line-height: 1.6; margin-bottom: 12px;">
+          Test the connection step by step. Each test will tell you exactly what's working and what's not.
+        </p>
+        <div class="btn-row" style="margin-bottom: 8px;">
+          <button class="btn" id="diagShowStored">📋  Show stored values</button>
+          <button class="btn" id="diagTestSheet">🌐  Test sheet load</button>
+        </div>
+        <div id="diagOutput" style="
+          margin-top: 10px;
+          padding: 10px 12px;
+          background: #050507;
+          border: 1px solid var(--border-1);
+          border-radius: var(--radius-md);
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          color: var(--text-2);
+          white-space: pre-wrap;
+          word-break: break-all;
+          line-height: 1.6;
+          max-height: 320px;
+          overflow-y: auto;
+          display: none;
+        "></div>
       </div>
     </div>
 
@@ -1732,6 +1780,100 @@ document.getElementById("resetAllBtn").addEventListener("click", async () => {
   sheetData = null;
   showLogin();
   toast("Everything reset", "success");
+});
+
+/* ============= DIAGNOSTICS ============= */
+const diagOut = () => document.getElementById("diagOutput");
+
+function diagPrint(text) {
+  const el = diagOut();
+  el.style.display = "block";
+  el.textContent = text;
+}
+
+function maskValue(v, keepStart = 6, keepEnd = 4) {
+  if (!v) return "(empty)";
+  if (v.length <= keepStart + keepEnd) return v;
+  return v.slice(0, keepStart) + "..." + v.slice(-keepEnd) + " [len=" + v.length + "]";
+}
+
+document.getElementById("diagShowStored").addEventListener("click", () => {
+  const items = {
+    "ss_proxyUrl":     localStorage.getItem("ss_proxyUrl"),
+    "ss_token":        localStorage.getItem("ss_token"),
+    "ss_userEmail":    localStorage.getItem("ss_userEmail"),
+    "ss_userName":     localStorage.getItem("ss_userName"),
+    "ss_sheetId":      localStorage.getItem("ss_sheetId"),
+    "ss_isDemo":       localStorage.getItem("ss_isDemo"),
+    "ss_captureMode":  localStorage.getItem("ss_captureMode"),
+  };
+  let out = "STORED IN DEVICE:\n\n";
+  for (const [k, v] of Object.entries(items)) {
+    if (k === "ss_token") {
+      out += `${k}\n  = ${maskValue(v)}\n\n`;
+    } else if (k === "ss_proxyUrl" || k === "ss_userEmail" || k === "ss_userName" || k === "ss_sheetId") {
+      out += `${k}\n  = ${v ?? "(empty)"}\n\n`;
+    } else {
+      out += `${k} = ${v ?? "(empty)"}\n`;
+    }
+  }
+  diagPrint(out);
+});
+
+document.getElementById("diagTestSheet").addEventListener("click", async () => {
+  const proxy = localStorage.getItem("ss_proxyUrl");
+  const tok   = localStorage.getItem("ss_token");
+  const email = localStorage.getItem("ss_userEmail");
+  const sid   = localStorage.getItem("ss_sheetId");
+
+  let out = "TEST SHEET LOAD:\n\n";
+  out += `proxy = ${proxy || "(empty)"}\n`;
+  out += `email = ${email || "(empty)"}\n`;
+  out += `key   = ${maskValue(tok)}\n`;
+  out += `sheet = ${sid || "(empty)"}\n\n`;
+
+  if (!proxy || !tok || !email || !sid) {
+    out += "✗ Missing required values. Sign in or set Sheet ID first.";
+    diagPrint(out);
+    return;
+  }
+
+  out += "Sending request...\n\n";
+  diagPrint(out);
+
+  const headers = {
+    "X-License-Key": tok,
+    "X-User-Email":  email,
+    "Content-Type":  "application/json"
+  };
+
+  try {
+    const r = await fetch(`${proxy.replace(/\/+$/, "")}/sheets/${sid}`, { headers });
+    const text = await r.text();
+    out += `STATUS: ${r.status} ${r.statusText}\n\n`;
+    out += `BODY (first 500 chars):\n${text.slice(0, 500)}\n\n`;
+    out += `HEADERS SENT:\n`;
+    for (const [k, v] of Object.entries(headers)) {
+      if (k === "X-License-Key") out += `  ${k}: ${maskValue(v)}\n`;
+      else out += `  ${k}: ${v}\n`;
+    }
+    out += "\n";
+    if (r.status === 200) {
+      out += "✓ SHEET LOAD SUCCESS!";
+    } else if (r.status === 401) {
+      out += "✗ 401 — worker says license/email header missing.\n   This means the headers above didn't reach the worker correctly.";
+    } else if (r.status === 403) {
+      out += "✗ 403 — worker rejected the license. See body above for reason.";
+    } else if (r.status === 404) {
+      out += "✗ 404 — Sheet ID not found in Smartsheet.";
+    } else {
+      out += `✗ HTTP ${r.status} — see body above for details.`;
+    }
+    diagPrint(out);
+  } catch (err) {
+    out += `\n✗ NETWORK ERROR: ${err.message}\n   Likely cause: proxy URL incorrect, or worker offline.`;
+    diagPrint(out);
+  }
 });
 
 /* ============= SYNC STATS ============= */
