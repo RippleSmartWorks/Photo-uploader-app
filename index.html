@@ -346,40 +346,24 @@
   label .req { color: var(--danger); margin-left: 2px; }
   label .hint-link { color: var(--accent); cursor: pointer; font-weight: 500; }
 
-  input[type="text"], input[type="password"], input[type="email"],
-  input[type="tel"],  input[type="url"],      input[type="number"],
-  input[type="search"], input:not([type]),
-  select, textarea {
+  input[type="text"], input[type="password"], select, textarea {
     width: 100%;
     padding: 11px 13px;
     background: var(--bg-2);
     border: 1px solid var(--border-2);
     border-radius: var(--radius-md);
     color: var(--text-1);
-    -webkit-text-fill-color: var(--text-1);  /* Forces text color on iOS Safari */
     font-size: 14px;
     font-family: inherit;
     transition: all 0.15s;
-    -webkit-appearance: none;
-    appearance: none;
   }
-  input:focus, select:focus, textarea:focus {
+  input:focus, select:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
     background: var(--bg-3);
   }
-  input::placeholder { color: var(--text-4); -webkit-text-fill-color: var(--text-4); }
-
-  /* Force dark theme on autofilled inputs (Chrome/iOS make these yellow/white otherwise) */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--text-1) !important;
-    -webkit-box-shadow: 0 0 0 1000px var(--bg-2) inset !important;
-    caret-color: var(--text-1);
-    transition: background-color 5000s ease-in-out 0s;
-  }
+  input::placeholder { color: var(--text-4); }
   select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1ab' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -1896,8 +1880,8 @@ document.getElementById("previewBtn").addEventListener("click", async () => {
   for (const p of all) {
     const info = sheetData.itemMap[p.door];
     const ok   = !!info;
-    const pos  = info ? (info.position === "L" ? "Left" : "Right") : "—";
-    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} (${pos})`,
+    const side = p.sideName || (p.sideChoice === "A" ? "Side A" : p.sideChoice === "B" ? "Side B" : "—");
+    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} (${side})`,
         ok ? 'ok' : 'warn');
   }
 });
@@ -2047,22 +2031,33 @@ async function runUpload(dryRun) {
       skip++; continue;
     }
     const rowId    = info.rowId;
-    const isLeft   = info.position === "L";
-    const colTitle = isLeft ? leftCol : rightCol;
+    // Routing: user's side choice determines the COLUMN.
+    //   Side A (Unsecure / Image01) → leftCol (the "Side A column" in Sync setup)
+    //   Side B (Secure / Image02)   → rightCol (the "Side B column" in Sync setup)
+    // Row is still derived from where the item appears in the sheet.
+    // Fallback for legacy records that don't have sideChoice: use position.
+    let isSideA;
+    if (p.sideChoice === "A" || p.sideChoice === "B") {
+      isSideA = (p.sideChoice === "A");
+    } else {
+      // Legacy records (pre-v12) — use position
+      isSideA = (info.position === "L");
+    }
+    const colTitle = isSideA ? leftCol : rightCol;
     const colId    = colMap[colTitle];
-    const posName  = isLeft ? "Left" : "Right";
+    const sideName = isSideA ? "Side A" : "Side B";
     if (!colId) {
       log(`  ⚠ no col '${colTitle}' — skip`, "warn");
       skip++; continue;
     }
 
     if (dryRun) {
-      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle} (${posName})`, "warn");
+      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle} (${sideName})`, "warn");
       ok++;
     } else {
       try {
         await attachImageToCell(sheetData.id, rowId, colId, p.blob, p.filename);
-        log(`  ✓ ${p.filename} → ${p.door} (${posName})`, "ok");
+        log(`  ✓ ${p.filename} → ${p.door} (${sideName} → ${colTitle})`, "ok");
         p.uploaded = true;
         p.uploadedAt = new Date().toISOString();
         await dbUpdate(p);
