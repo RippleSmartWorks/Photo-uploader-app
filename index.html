@@ -1232,9 +1232,9 @@ const MODES = {
     sideBTag:    "S · INSIDE",
     sideBSuffix: "S",
     colALabel:   "Unsecure column",
-    colAHint:    "Image goes here when item is on the LEFT side of the sheet row",
+    colAHint:    "All Unsecure photos (suffix U) upload to this column",
     colBLabel:   "Secure column",
-    colBHint:    "Image goes here when item is on the RIGHT side of the sheet row",
+    colBHint:    "All Secure photos (suffix S) upload to this column",
     storageA:    "ss_acs_colA",
     storageB:    "ss_acs_colB"
   },
@@ -1247,9 +1247,9 @@ const MODES = {
     sideBTag:    "R · RIGHT",
     sideBSuffix: "R",
     colALabel:   "Image01 column",
-    colAHint:    "Image goes here when camera is on the LEFT side of the sheet row",
+    colAHint:    "All Image01 photos (suffix L) upload to this column",
     colBLabel:   "Image02 column",
-    colBHint:    "Image goes here when camera is on the RIGHT side of the sheet row",
+    colBHint:    "All Image02 photos (suffix R) upload to this column",
     storageA:    "ss_cctv_colA",
     storageB:    "ss_cctv_colB"
   }
@@ -1905,8 +1905,8 @@ document.getElementById("previewBtn").addEventListener("click", async () => {
   for (const p of all) {
     const info = sheetData.itemMap[p.door];
     const ok   = !!info;
-    const pos  = info ? (info.position === "L" ? "Left" : "Right") : "—";
-    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} (${pos})`,
+    const side = p.sideName || (p.sideChoice === "A" ? "Side A" : p.sideChoice === "B" ? "Side B" : "—");
+    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} (${side})`,
         ok ? 'ok' : 'warn');
   }
 });
@@ -2048,30 +2048,40 @@ async function runUpload(dryRun) {
     document.querySelector("#progBar > div").style.width =
       Math.round((i / all.length) * 100) + "%";
 
-    // Look up from sheet at upload time (more accurate than stored position
-    // in case sheet was edited or photo was captured before sheet load)
+    // Look up the ROW from sheet (column comes from user's side choice below)
     const info = sheetData.itemMap[p.door];
     if (!info) {
       log(`  ⚠ no row for ${p.door} — skip ${p.filename}`, "warn");
       skip++; continue;
     }
-    const rowId    = info.rowId;
-    const isLeft   = info.position === "L";
-    const colTitle = isLeft ? leftCol : rightCol;
+    const rowId = info.rowId;
+    // Routing: user's side choice determines the COLUMN.
+    //   Side A (Unsecure / Image01) → leftCol (the "Side A column" in Sync setup)
+    //   Side B (Secure / Image02)   → rightCol (the "Side B column" in Sync setup)
+    // Row is still derived from where the item appears in the sheet.
+    // Fallback for legacy records that don't have sideChoice: use position.
+    let isSideA;
+    if (p.sideChoice === "A" || p.sideChoice === "B") {
+      isSideA = (p.sideChoice === "A");
+    } else {
+      // Legacy records (pre-v12) — fall back to position
+      isSideA = (info.position === "L");
+    }
+    const colTitle = isSideA ? leftCol : rightCol;
     const colId    = colMap[colTitle];
-    const posName  = isLeft ? "Left" : "Right";
+    const sideName = isSideA ? (p.sideName || "Side A") : (p.sideName || "Side B");
     if (!colId) {
       log(`  ⚠ no col '${colTitle}' — skip`, "warn");
       skip++; continue;
     }
 
     if (dryRun) {
-      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle} (${posName})`, "warn");
+      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle} (${sideName})`, "warn");
       ok++;
     } else {
       try {
         await attachImageToCell(sheetData.id, rowId, colId, p.blob, p.filename);
-        log(`  ✓ ${p.filename} → ${p.door} (${posName})`, "ok");
+        log(`  ✓ ${p.filename} → ${p.door} (${sideName} → ${colTitle})`, "ok");
         p.uploaded = true;
         p.uploadedAt = new Date().toISOString();
         await dbUpdate(p);
