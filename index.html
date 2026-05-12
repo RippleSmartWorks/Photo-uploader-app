@@ -346,13 +346,14 @@
   label .req { color: var(--danger); margin-left: 2px; }
   label .hint-link { color: var(--accent); cursor: pointer; font-weight: 500; }
 
-  input[type="text"], input[type="password"], select, textarea {
+  input[type="text"], input[type="password"], input[type="email"], input[type="tel"], input[type="url"], input[type="number"], input[type="search"], input:not([type]), select, textarea {
     width: 100%;
     padding: 11px 13px;
     background: var(--bg-2);
     border: 1px solid var(--border-2);
     border-radius: var(--radius-md);
-    color: var(--text-1);
+    color: var(--text-1) !important;
+    -webkit-text-fill-color: var(--text-1) !important;
     font-size: 14px;
     font-family: inherit;
     transition: all 0.15s;
@@ -362,8 +363,32 @@
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
     background: var(--bg-3);
+    color: var(--text-1) !important;
+    -webkit-text-fill-color: var(--text-1) !important;
   }
   input::placeholder { color: var(--text-4); }
+
+  /* ==================== AUTOFILL FIX ==================== */
+  /* Safari/Chrome force a light yellow background + black text on autofilled fields.
+     Override with our dark theme colors so the email/password stays readable. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-2) inset !important;
+    -webkit-text-fill-color: var(--text-1) !important;
+    caret-color: var(--text-1) !important;
+    transition: background-color 5000s ease-in-out 0s;
+    background-clip: content-box !important;
+  }
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px var(--bg-3) inset, 0 0 0 3px var(--accent-soft) !important;
+  }
+  /* Firefox equivalent */
+  input:autofill {
+    background-color: var(--bg-2) !important;
+    color: var(--text-1) !important;
+  }
   select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1ab' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
@@ -1880,8 +1905,8 @@ document.getElementById("previewBtn").addEventListener("click", async () => {
   for (const p of all) {
     const info = sheetData.itemMap[p.door];
     const ok   = !!info;
-    const side = p.sideName || (p.sideChoice === "A" ? "Side A" : p.sideChoice === "B" ? "Side B" : "—");
-    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} (${side})`,
+    const pos  = info ? (info.position === "L" ? "Left" : "Right") : "—";
+    log(`  ${ok ? '✓' : '⚠'}  ${p.filename} → ${p.door} (${pos})`,
         ok ? 'ok' : 'warn');
   }
 });
@@ -2031,33 +2056,22 @@ async function runUpload(dryRun) {
       skip++; continue;
     }
     const rowId    = info.rowId;
-    // Routing: user's side choice determines the COLUMN.
-    //   Side A (Unsecure / Image01) → leftCol (the "Side A column" in Sync setup)
-    //   Side B (Secure / Image02)   → rightCol (the "Side B column" in Sync setup)
-    // Row is still derived from where the item appears in the sheet.
-    // Fallback for legacy records that don't have sideChoice: use position.
-    let isSideA;
-    if (p.sideChoice === "A" || p.sideChoice === "B") {
-      isSideA = (p.sideChoice === "A");
-    } else {
-      // Legacy records (pre-v12) — use position
-      isSideA = (info.position === "L");
-    }
-    const colTitle = isSideA ? leftCol : rightCol;
+    const isLeft   = info.position === "L";
+    const colTitle = isLeft ? leftCol : rightCol;
     const colId    = colMap[colTitle];
-    const sideName = isSideA ? "Side A" : "Side B";
+    const posName  = isLeft ? "Left" : "Right";
     if (!colId) {
       log(`  ⚠ no col '${colTitle}' — skip`, "warn");
       skip++; continue;
     }
 
     if (dryRun) {
-      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle} (${sideName})`, "warn");
+      log(`  ⚠ DRY: would upload ${p.filename} → row ${rowId}, col ${colTitle} (${posName})`, "warn");
       ok++;
     } else {
       try {
         await attachImageToCell(sheetData.id, rowId, colId, p.blob, p.filename);
-        log(`  ✓ ${p.filename} → ${p.door} (${sideName} → ${colTitle})`, "ok");
+        log(`  ✓ ${p.filename} → ${p.door} (${posName})`, "ok");
         p.uploaded = true;
         p.uploadedAt = new Date().toISOString();
         await dbUpdate(p);
